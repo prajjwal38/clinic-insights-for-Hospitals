@@ -22,8 +22,7 @@ import pandas as pd
 import plotly.express as px
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
@@ -58,14 +57,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Serve the chat UI ─────────────────────────────────────────────────────────
+# ── Serve the chat UI (no-cache for dev) ─────────────────────────────────────
+from fastapi.responses import FileResponse
+
 _STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
-if os.path.isdir(_STATIC_DIR):
-    app.mount("/ui", StaticFiles(directory=_STATIC_DIR, html=True), name="static")
 
 @app.get("/", include_in_schema=False)
 async def root():
     return RedirectResponse(url="/ui")
+
+@app.get("/ui", include_in_schema=False)
+@app.get("/ui/", include_in_schema=False)
+async def serve_ui():
+    return FileResponse(
+        os.path.join(_STATIC_DIR, "index.html"),
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+    )
 
 
 # ── Request / Response models ─────────────────────────────────────────────────
