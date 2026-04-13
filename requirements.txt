@@ -1,0 +1,14 @@
+# ── Core NL2SQL framework ──────────────────────────────────────────────────────
+vanna[ollama]>=2.0.0
+
+# ── Web server ─────────────────────────────────────────────────────────────────
+fastapi
+uvicorn[standard]
+
+# ── Data & visualisation ───────────────────────────────────────────────────────
+plotly
+pandas
+
+# ── Environment management ─────────────────────────────────────────────────────
+python-dotenv
+

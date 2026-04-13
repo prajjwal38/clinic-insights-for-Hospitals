@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clinic NL2SQL · Ask Your Data</title>
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d0f17;
+      --surface:  #161929;
+      --surface2: #1e2236;
+      --border:   #2a2f4a;
+      --accent:   #6c63ff;
+      --accent2:  #a78bfa;
+      --green:    #34d399;
+      --red:      #f87171;
+      --text:     #e2e8f0;
+      --muted:    #64748b;
+      --radius:   14px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────────────── */
+    header {
+      padding: 20px 32px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    header .logo {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    header h1 { font-size: 18px; font-weight: 600; }
+    header p  { font-size: 12px; color: var(--muted); }
+
+    /* ── Main layout ─────────────────────────────────────────────────────── */
+    main {
+      flex: 1;
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ── Input bar ───────────────────────────────────────────────────────── */
+    .input-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      transition: border-color 0.2s;
+    }
+    .input-wrap:focus-within { border-color: var(--accent); }
+
+    #question {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 15px;
+      line-height: 1.5;
+      min-height: 52px;
+      max-height: 160px;
+    }
+    #question::placeholder { color: var(--muted); }
+
+    #sendBtn {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 11px 22px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      white-space: nowrap;
+      display: flex; align-items: center; gap: 8px;
+    }
+    #sendBtn:hover  { opacity: 0.9; }
+    #sendBtn:active { transform: scale(0.97); }
+    #sendBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Quick examples */
+    .examples {
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .examples span {
+      font-size: 11px; color: var(--muted);
+      padding-top: 2px;
+      white-space: nowrap;
+    }
+    .chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 13px;
+      font-size: 12px;
+      color: var(--text);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .chip:hover { border-color: var(--accent); background: #2a2f4a; }
+
+    /* ── Result card ─────────────────────────────────────────────────────── */
+    #result { display: none; animation: fadeUp 0.3s ease; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .badge {
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-green { background: rgba(52,211,153,.15); color: var(--green); }
+    .badge-red   { background: rgba(248,113,113,.15); color: var(--red);  }
+
+    /* Message */
+    #aiMessage {
+      padding: 16px 20px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* SQL block */
+    .sql-block {
+      padding: 14px 20px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+    .sql-block label {
+      font-size: 11px; font-weight: 600;
+      color: var(--muted); text-transform: uppercase; letter-spacing: .05em;
+      display: block; margin-bottom: 8px;
+    }
+    .sql-block pre {
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      color: var(--accent2);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* Chart */
+    #chartContainer {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      display: none;
+    }
+    #chart { width: 100%; height: 360px; }
+
+    /* Table */
+    #tableContainer {
+      overflow-x: auto;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead { position: sticky; top: 0; background: var(--surface2); z-index: 1; }
+    th {
+      padding: 10px 16px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+
+    /* Footer meta row */
+    .meta-row {
+      padding: 10px 20px;
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      gap: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Loading steps */
+    .thinking {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      display: none;
+      animation: fadeUp 0.25s ease;
+    }
+    .thinking-title {
+      font-size: 13px; font-weight: 600; color: var(--muted);
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .step-list { display: flex; flex-direction: column; gap: 10px; }
+    .step {
+      display: flex; align-items: center; gap: 12px;
+      font-size: 13px; color: var(--muted);
+      transition: color 0.3s;
+    }
+    .step.active  { color: var(--accent2); }
+    .step.done    { color: var(--green); }
+    .step-icon {
+      width: 22px; height: 22px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; flex-shrink: 0;
+      background: var(--surface2); border: 1px solid var(--border);
+    }
+    .step.active .step-icon { border-color: var(--accent); background: rgba(108,99,255,.15); }
+    .step.done   .step-icon { border-color: var(--green);  background: rgba(52,211,153,.15); }
+    .elapsed {
+      margin-top: 14px; font-size: 11px; color: var(--muted);
+    }
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Error state */
+    .error-card {
+      background: rgba(248,113,113,.08);
+      border: 1px solid rgba(248,113,113,.3);
+      border-radius: var(--radius);
+      padding: 20px;
+      color: var(--red);
+      font-size: 14px;
+    }
+
+</head>
+<body>
+
+<header>
+  <div class="logo">🏥</div>
+  <div>
+    <h1>Clinic Data Assistant</h1>
+    <p>Powered by qwen3:8b · Local Inference · Zero Latency</p>
+  </div>
+</header>
+
+<main>
+
+  <!-- Input -->
+  <div>
+    <div class="input-wrap">
+      <textarea id="question" rows="2" placeholder="Ask anything about patients, doctors, appointments, treatments, or invoices…"></textarea>
+      <button id="sendBtn" onclick="ask()">
+        <span id="btnLabel">Ask</span>
+        <span>⚡</span>
+      </button>
+    </div>
+    <div class="examples" style="margin-top:10px;">
+      <span>Try:</span>
+      <div class="chip" onclick="setQ('How many patients are registered in total?')">Total patients</div>
+      <div class="chip" onclick="setQ('Which cities have the most patients?')">Patients by city</div>
+      <div class="chip" onclick="setQ('Who is the busiest doctor?')">Busiest doctor</div>
+      <div class="chip" onclick="setQ('What is the total revenue from paid invoices?')">Total revenue</div>
+      <div class="chip" onclick="setQ('What are the most popular treatments?')">Popular treatments</div>
+      <div class="chip" onclick="setQ('How many appointments are there by status?')">Appointments by status</div>
+    </div>
+  </div>
+
+  <!-- Thinking indicator -->
+  <div class="thinking" id="thinking">
+    <div class="thinking-title">
+      <span class="spinner" style="border-top-color:var(--accent2)"></span>
+      <span>Processing your question&hellip;</span>
+    </div>
+    <div class="step-list">
+      <div class="step" id="s1">
+        <div class="step-icon">1</div>
+        <span>Sending question to qwen3:8b agent</span>
+      </div>
+      <div class="step" id="s2">
+        <div class="step-icon">2</div>
+        <span>Agent generating SQL &amp; running query</span>
+      </div>
+      <div class="step" id="s3">
+        <div class="step-icon">3</div>
+        <span>Rendering results &amp; chart</span>
+      </div>
+    </div>
+    <div class="elapsed" id="elapsed">0s elapsed</div>
+  </div>
+
+  <!-- Result -->
+  <div id="result">
+    <div class="card" id="resultCard">
+      <div class="card-header">
+        <span>📊</span>
+        <span>Query Result</span>
+        <span id="statusBadge" class="badge badge-green">OK</span>
+        <span style="margin-left:auto; color:var(--muted); font-size:12px; font-weight:400;" id="rowMeta"></span>
+      </div>
+      <div id="aiMessage"></div>
+      <div class="sql-block">
+        <label>SQL</label>
+        <pre id="sqlDisplay"></pre>
+      </div>
+      <div id="chartContainer">
+        <div id="chart"></div>
+      </div>
+      <div id="tableContainer"></div>
+      <div class="meta-row">
+        <span id="footerMeta"></span>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  const API = 'http://localhost:8000/chat';
+
+  function setQ(q) {
+    document.getElementById('question').value = q;
+    document.getElementById('question').focus();
+  }
+
+  document.getElementById('question').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); }
+  });
+
+  async function ask() {
+    const q = document.getElementById('question').value.trim();
+    if (!q) return;
+
+    const btn     = document.getElementById('sendBtn');
+    const label   = document.getElementById('btnLabel');
+    const thinking = document.getElementById('thinking');
+
+    btn.disabled = true;
+    label.innerHTML = '<span class="spinner"></span>';
+    document.getElementById('result').style.display = 'none';
+
+    // Show thinking panel
+    thinking.style.display = 'block';
+    thinking.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setStep(1);
+
+    // Elapsed timer
+    const t0 = Date.now();
+    const timer = setInterval(() => {
+      document.getElementById('elapsed').textContent =
+        `${((Date.now() - t0) / 1000).toFixed(1)}s elapsed`;
+    }, 200);
+
+    // Advance step after ~3s (model usually starts generating by then)
+    setTimeout(() => setStep(2), 3000);
+
+    try {
+      const res = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: q }),
+      });
+
+      setStep(3);
+      const data = await res.json();
+      clearInterval(timer);
+      thinking.style.display = 'none';
+      render(data);
+    } catch (err) {
+      clearInterval(timer);
+      thinking.style.display = 'none';
+      renderError(`Could not reach the server. Make sure uvicorn is running.\n${err}`);
+    } finally {
+      btn.disabled = false;
+      label.textContent = 'Ask';
+      resetSteps();
+    }
+  }
+
+  function setStep(n) {
+    for (let i = 1; i <= 3; i++) {
+      const el = document.getElementById('s' + i);
+      el.classList.remove('active', 'done');
+      if (i < n)  el.classList.add('done'),   (el.querySelector('.step-icon').textContent = '✓');
+      if (i === n) el.classList.add('active');
+    }
+  }
+  function resetSteps() {
+    for (let i = 1; i <= 3; i++) {
+      const el = document.getElementById('s' + i);
+      el.classList.remove('active', 'done');
+      el.querySelector('.step-icon').textContent = i;
+    }
+  }
+
+  function render(data) {
+    const result = document.getElementById('result');
+    result.style.display = 'block';
+
+    // Message
+    document.getElementById('aiMessage').textContent = data.message || '';
+
+    // SQL
+    document.getElementById('sqlDisplay').textContent = data.sql_query || '—';
+
+    // Status badge
+    const badge = document.getElementById('statusBadge');
+    const isErr = !data.row_count && !data.columns?.length;
+    badge.textContent = isErr ? 'No Data' : `${data.row_count} row${data.row_count !== 1 ? 's' : ''}`;
+    badge.className = 'badge ' + (isErr ? 'badge-red' : 'badge-green');
+    document.getElementById('rowMeta').textContent = '';
+
+    // Chart
+    const chartDiv = document.getElementById('chartContainer');
+    if (data.chart && Object.keys(data.chart).length > 0) {
+      chartDiv.style.display = 'block';
+      const layout = {
+        ...(data.chart.layout || {}),
+        paper_bgcolor: 'transparent',
+        plot_bgcolor:  'transparent',
+        font: { color: '#e2e8f0', family: 'Inter, sans-serif', size: 12 },
+        margin: { t: 40, r: 20, b: 60, l: 60 },
+        xaxis: { ...(data.chart.layout?.xaxis || {}), gridcolor: '#2a2f4a', zerolinecolor: '#2a2f4a' },
+        yaxis: { ...(data.chart.layout?.yaxis || {}), gridcolor: '#2a2f4a', zerolinecolor: '#2a2f4a' },
+      };
+      const traces = data.chart.data || [];
+      Plotly.react('chart', traces, layout, { responsive: true, displayModeBar: false });
+    } else {
+      chartDiv.style.display = 'none';
+    }
+
+    // Table
+    const tableDiv = document.getElementById('tableContainer');
+    if (data.columns?.length && data.rows?.length) {
+      let html = '<table><thead><tr>';
+      data.columns.forEach(c => { html += `<th>${c}</th>`; });
+      html += '</tr></thead><tbody>';
+      data.rows.forEach(row => {
+        html += '<tr>' + row.map(v => `<td>${v ?? '—'}</td>`).join('') + '</tr>';
+      });
+      html += '</tbody></table>';
+      tableDiv.innerHTML = html;
+    } else {
+      tableDiv.innerHTML = '';
+    }
+
+    document.getElementById('footerMeta').textContent =
+      `chart_type: ${data.chart_type} · rows: ${data.row_count}`;
+
+    result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderError(msg) {
+    const result = document.getElementById('result');
+    result.style.display = 'block';
+    result.innerHTML = `<div class="error-card">❌ ${msg}</div>`;
+  }
+</script>
+</body>
+</html>

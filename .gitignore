@@ -1,0 +1,18 @@
+# Git ignore rules for the NL2SQL project
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.db
+*.sqlite
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.DS_Store
+
+# Vanna agent auto-generated query result files
+c42d0ec1e6e11801/
+query_results_*.csv
