@@ -152,14 +152,15 @@ def validate_sql(sql: str) -> tuple[bool, str]:
 
     if not ALLOWED_STMT.match(stripped):
         return False, (
-            "Only SELECT queries are permitted. "
-            "The generated query contains a disallowed operation."
+            "Hold up! 🛑 Is that... a non-SELECT query? "
+            "We only do read-only operations here. Go try your dark magic elsewhere!"
         )
 
     if BLOCKED_RE.search(stripped):
         return False, (
-            "The query contains a forbidden keyword or pattern. "
-            "Please rephrase your question so it only reads data."
+            "Nice try, Bobby Tables! 🕵️‍♂️ "
+            "Did you really think I'd let you DROP, UPDATE, or DELETE my precious data? "
+            "This is a READ-ONLY zone. Move along before I call the DB admins."
         )
 
     return True, ""
@@ -445,9 +446,10 @@ async def chat(request: ChatRequest):
         logger.warning("No SQL or data extracted from agent response")
         return ChatResponse(
             message=(
-                "I wasn't able to generate a SQL query for that question. "
-                "Try rephrasing or asking about patients, doctors, appointments, "
-                "treatments, or invoices."
+                "I couldn't generate a query for that... let me guess, you asked me "
+                "to delete the database? Or maybe order a pizza? 🍕\n\n"
+                "I'm a clinic data assistant. Let's stick to reading about 'patients', "
+                "'doctors', or 'invoices' before one of us gets fired, okay?"
             ),
             sql_query="",
             columns=[],
